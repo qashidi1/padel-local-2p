@@ -12,9 +12,11 @@ const GROUND_Y = 460;
 const NET_X = WIDTH / 2;
 const NET_WIDTH = 12;
 const NET_HEIGHT = 120;
-const GRAVITY = 0.45;
-const MOVE_SPEED = 6;
-const JUMP_FORCE = -11;
+
+// Speed diturunkan jadi jauh lebih pelan
+const GRAVITY = 0.11;
+const MOVE_SPEED = 1.5;
+const JUMP_FORCE = -2.75;
 const WIN_SCORE = 7;
 
 const keys = {};
@@ -30,7 +32,7 @@ const playerLeft = {
   h: 80,
   vy: 0,
   onGround: true,
-  color: "#2563eb"
+  color: "#f59e0b"
 };
 
 const playerRight = {
@@ -40,14 +42,14 @@ const playerRight = {
   h: 80,
   vy: 0,
   onGround: true,
-  color: "#16a34a"
+  color: "#8b5cf6"
 };
 
 const ball = {
   x: WIDTH / 2,
   y: 140,
   r: 14,
-  vx: 4,
+  vx: 1,
   vy: 0,
   color: "#f97316"
 };
@@ -55,7 +57,7 @@ const ball = {
 function resetBall(direction = 1) {
   ball.x = WIDTH / 2;
   ball.y = 140;
-  ball.vx = 4 * direction;
+  ball.vx = 1 * direction;
   ball.vy = 0;
 
   playerLeft.x = 140;
@@ -132,13 +134,13 @@ function bounceBallFromPlayer(player, side) {
 
   if (side === "left") {
     ball.x = player.x + player.w + ball.r + 1;
-    ball.vx = Math.abs(4 + offset * 3);
+    ball.vx = Math.abs(1 + offset * 0.75);
   } else {
     ball.x = player.x - ball.r - 1;
-    ball.vx = -Math.abs(4 + offset * 3);
+    ball.vx = -Math.abs(1 + offset * 0.75);
   }
 
-  ball.vy = Math.min(-4, ball.vy - 2.5);
+  ball.vy = Math.min(-1, ball.vy - 0.6);
 }
 
 function updateBall() {
@@ -212,6 +214,15 @@ function checkWinner() {
 function drawBackground() {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
+  // tulisan background
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 64px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("Kambami Games", WIDTH / 2, 90);
+  ctx.restore();
+
   // ground
   ctx.fillStyle = "#caa472";
   ctx.fillRect(0, GROUND_Y, WIDTH, HEIGHT - GROUND_Y);
@@ -233,13 +244,71 @@ function drawBackground() {
 }
 
 function drawPlayer(player) {
-  ctx.fillStyle = player.color;
-  ctx.fillRect(player.x, player.y, player.w, player.h);
+  const isLeft = player === playerLeft;
+  const bodyColor = isLeft ? "#f59e0b" : "#8b5cf6";
+  const earColor = isLeft ? "#fcd34d" : "#c4b5fd";
+  const faceX = player.x + player.w / 2;
+  const faceY = player.y + 24;
+
+  // body
+  ctx.fillStyle = bodyColor;
+  ctx.beginPath();
+  ctx.roundRect(player.x - 8, player.y + 18, 44, 58, 14);
+  ctx.fill();
 
   // head
-  ctx.fillStyle = "#fde0c8";
+  ctx.fillStyle = bodyColor;
   ctx.beginPath();
-  ctx.arc(player.x + player.w / 2, player.y + 14, 12, 0, Math.PI * 2);
+  ctx.arc(faceX, faceY, 20, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (isLeft) {
+    // kucing
+    ctx.fillStyle = earColor;
+    ctx.beginPath();
+    ctx.moveTo(faceX - 14, faceY - 10);
+    ctx.lineTo(faceX - 6, faceY - 28);
+    ctx.lineTo(faceX - 1, faceY - 8);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(faceX + 14, faceY - 10);
+    ctx.lineTo(faceX + 6, faceY - 28);
+    ctx.lineTo(faceX + 1, faceY - 8);
+    ctx.fill();
+  } else {
+    // beruang
+    ctx.fillStyle = earColor;
+    ctx.beginPath();
+    ctx.arc(faceX - 12, faceY - 16, 7, 0, Math.PI * 2);
+    ctx.arc(faceX + 12, faceY - 16, 7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // mata
+  ctx.fillStyle = "#111827";
+  ctx.beginPath();
+  ctx.arc(faceX - 7, faceY - 2, 2.5, 0, Math.PI * 2);
+  ctx.arc(faceX + 7, faceY - 2, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // hidung
+  ctx.beginPath();
+  ctx.arc(faceX, faceY + 4, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // senyum
+  ctx.strokeStyle = "#111827";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(faceX, faceY + 7, 6, 0.2, Math.PI - 0.2);
+  ctx.stroke();
+
+  // kaki
+  ctx.fillStyle = "#fde68a";
+  ctx.beginPath();
+  ctx.ellipse(player.x + 6, player.y + 76, 6, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(player.x + 22, player.y + 76, 6, 4, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -258,7 +327,8 @@ function drawWinnerOverlay() {
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 42px Arial";
-  ctx.fillText(messageEl.textContent, WIDTH / 2 - 180, 120);
+  ctx.textAlign = "center";
+  ctx.fillText(messageEl.textContent, WIDTH / 2, 120);
 }
 
 function gameLoop() {
