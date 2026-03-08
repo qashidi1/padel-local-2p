@@ -12,15 +12,27 @@ const GROUND_Y = 460;
 const NET_X = WIDTH / 2;
 const NET_WIDTH = 12;
 const NET_HEIGHT = 120;
-
-// Speed diturunkan jadi jauh lebih pelan
-const GRAVITY = 0.11;
-const MOVE_SPEED = 1.5;
-const JUMP_FORCE = -2.75;
 const WIN_SCORE = 7;
 
-const keys = {};
+// Physics/update
+const FIXED_TIMESTEP = 1000 / 120; // 120 Hz
+const GRAVITY = 0.32;
+const PLAYER_MOVE_SPEED = 5.4; // responsif
+const PLAYER_JUMP_FORCE = -8.2;
+const MAX_FALL_SPEED = 12;
 
+// Ball speed levels
+const BALL_SPEED_LEVELS = {
+  1: { label: "Very Slow", baseVX: 1.2, bounceX: 1.3, bounceBoost: 0.25, bounceY: -2.0 },
+  2: { label: "Slow",      baseVX: 1.8, bounceX: 1.8, bounceBoost: 0.35, bounceY: -2.6 },
+  3: { label: "Medium",    baseVX: 2.5, bounceX: 2.4, bounceBoost: 0.50, bounceY: -3.3 },
+  4: { label: "Fast",      baseVX: 3.2, bounceX: 3.0, bounceBoost: 0.65, bounceY: -4.0 },
+  5: { label: "Very Fast", baseVX: 4.0, bounceX: 3.8, bounceBoost: 0.80, bounceY: -4.8 }
+};
+
+let ballSpeedLevel = 2;
+
+const keys = {};
 let leftScore = 0;
 let rightScore = 0;
 let gameOver = false;
@@ -49,15 +61,21 @@ const ball = {
   x: WIDTH / 2,
   y: 140,
   r: 14,
-  vx: 1,
+  vx: BALL_SPEED_LEVELS[ballSpeedLevel].baseVX,
   vy: 0,
   color: "#f97316"
 };
 
+function getBallConfig() {
+  return BALL_SPEED_LEVELS[ballSpeedLevel];
+}
+
 function resetBall(direction = 1) {
+  const cfg = getBallConfig();
+
   ball.x = WIDTH / 2;
   ball.y = 140;
-  ball.vx = 1 * direction;
+  ball.vx = cfg.baseVX * direction;
   ball.vy = 0;
 
   playerLeft.x = 140;
@@ -75,8 +93,8 @@ function restartGame() {
   leftScore = 0;
   rightScore = 0;
   gameOver = false;
-  messageEl.textContent = "";
   updateScore();
+  messageEl.textContent = "";
   resetBall(Math.random() < 0.5 ? -1 : 1);
 }
 
@@ -100,15 +118,16 @@ function circleRectCollision(ballObj, rect) {
 function updatePlayer(player, controls, side) {
   if (gameOver) return;
 
-  if (keys[controls.left]) player.x -= MOVE_SPEED;
-  if (keys[controls.right]) player.x += MOVE_SPEED;
+  if (keys[controls.left]) player.x -= PLAYER_MOVE_SPEED;
+  if (keys[controls.right]) player.x += PLAYER_MOVE_SPEED;
 
   if (keys[controls.jump] && player.onGround) {
-    player.vy = JUMP_FORCE;
+    player.vy = PLAYER_JUMP_FORCE;
     player.onGround = false;
   }
 
   player.vy += GRAVITY;
+  player.vy = Math.min(player.vy, MAX_FALL_SPEED);
   player.y += player.vy;
 
   if (player.y + player.h >= GROUND_Y) {
@@ -129,24 +148,26 @@ function bounceBallFromPlayer(player, side) {
 
   if (!circleRectCollision(ball, rect)) return;
 
+  const cfg = getBallConfig();
   const centerX = player.x + player.w / 2;
   const offset = (ball.x - centerX) / (player.w / 2);
 
   if (side === "left") {
     ball.x = player.x + player.w + ball.r + 1;
-    ball.vx = Math.abs(1 + offset * 0.75);
+    ball.vx = Math.abs(cfg.bounceX + offset * cfg.bounceBoost);
   } else {
     ball.x = player.x - ball.r - 1;
-    ball.vx = -Math.abs(1 + offset * 0.75);
+    ball.vx = -Math.abs(cfg.bounceX + offset * cfg.bounceBoost);
   }
 
-  ball.vy = Math.min(-1, ball.vy - 0.6);
+  ball.vy = Math.min(cfg.bounceY, ball.vy - 0.35);
 }
 
 function updateBall() {
   if (gameOver) return;
 
   ball.vy += GRAVITY;
+  ball.vy = Math.min(ball.vy, MAX_FALL_SPEED);
   ball.x += ball.vx;
   ball.y += ball.vy;
 
@@ -162,7 +183,7 @@ function updateBall() {
 
   if (ball.y - ball.r <= 0) {
     ball.y = ball.r;
-    ball.vy *= -1;
+    ball.vy *= -0.95;
   }
 
   const netRect = {
@@ -180,7 +201,7 @@ function updateBall() {
       ball.x = netRect.x + netRect.w + ball.r + 1;
       ball.vx = Math.abs(ball.vx);
     }
-    ball.vy *= 0.98;
+    ball.vy *= 0.96;
   }
 
   bounceBallFromPlayer(playerLeft, "left");
@@ -204,17 +225,16 @@ function updateBall() {
 function checkWinner() {
   if (leftScore >= WIN_SCORE) {
     gameOver = true;
-    messageEl.textContent = "Left Player Menang!";
+    messageEl.textContent = `Left Player Menang! | Ball Speed: ${ballSpeedLevel} (${getBallConfig().label})`;
   } else if (rightScore >= WIN_SCORE) {
     gameOver = true;
-    messageEl.textContent = "Right Player Menang!";
+    messageEl.textContent = `Right Player Menang! | Ball Speed: ${ballSpeedLevel} (${getBallConfig().label})`;
   }
 }
 
 function drawBackground() {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-  // tulisan background
   ctx.save();
   ctx.globalAlpha = 0.12;
   ctx.fillStyle = "#ffffff";
@@ -223,24 +243,26 @@ function drawBackground() {
   ctx.fillText("Kambami Games", WIDTH / 2, 90);
   ctx.restore();
 
-  // ground
   ctx.fillStyle = "#caa472";
   ctx.fillRect(0, GROUND_Y, WIDTH, HEIGHT - GROUND_Y);
 
-  // center net
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(NET_X - NET_WIDTH / 2, GROUND_Y - NET_HEIGHT, NET_WIDTH, NET_HEIGHT);
 
-  // top of net
   ctx.fillStyle = "#ef4444";
   ctx.fillRect(NET_X - 30, GROUND_Y - NET_HEIGHT - 8, 60, 8);
 
-  // center line
   ctx.strokeStyle = "rgba(255,255,255,0.25)";
   ctx.beginPath();
   ctx.moveTo(NET_X, 0);
   ctx.lineTo(NET_X, GROUND_Y);
   ctx.stroke();
+
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.font = "bold 18px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText(`Ball Speed Level: ${ballSpeedLevel} (${getBallConfig().label})`, 20, 30);
+  ctx.fillText("Press 1-5 to change ball speed", 20, 55);
 }
 
 function drawPlayer(player) {
@@ -250,20 +272,17 @@ function drawPlayer(player) {
   const faceX = player.x + player.w / 2;
   const faceY = player.y + 24;
 
-  // body
   ctx.fillStyle = bodyColor;
   ctx.beginPath();
   ctx.roundRect(player.x - 8, player.y + 18, 44, 58, 14);
   ctx.fill();
 
-  // head
   ctx.fillStyle = bodyColor;
   ctx.beginPath();
   ctx.arc(faceX, faceY, 20, 0, Math.PI * 2);
   ctx.fill();
 
   if (isLeft) {
-    // kucing
     ctx.fillStyle = earColor;
     ctx.beginPath();
     ctx.moveTo(faceX - 14, faceY - 10);
@@ -277,7 +296,6 @@ function drawPlayer(player) {
     ctx.lineTo(faceX + 1, faceY - 8);
     ctx.fill();
   } else {
-    // beruang
     ctx.fillStyle = earColor;
     ctx.beginPath();
     ctx.arc(faceX - 12, faceY - 16, 7, 0, Math.PI * 2);
@@ -285,26 +303,22 @@ function drawPlayer(player) {
     ctx.fill();
   }
 
-  // mata
   ctx.fillStyle = "#111827";
   ctx.beginPath();
   ctx.arc(faceX - 7, faceY - 2, 2.5, 0, Math.PI * 2);
   ctx.arc(faceX + 7, faceY - 2, 2.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // hidung
   ctx.beginPath();
   ctx.arc(faceX, faceY + 4, 2.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // senyum
   ctx.strokeStyle = "#111827";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(faceX, faceY + 7, 6, 0.2, Math.PI - 0.2);
   ctx.stroke();
 
-  // kaki
   ctx.fillStyle = "#fde68a";
   ctx.beginPath();
   ctx.ellipse(player.x + 6, player.y + 76, 6, 4, 0, 0, Math.PI * 2);
@@ -331,22 +345,51 @@ function drawWinnerOverlay() {
   ctx.fillText(messageEl.textContent, WIDTH / 2, 120);
 }
 
-function gameLoop() {
-  updatePlayer(playerLeft, { left: "a", right: "d", jump: "w" }, "left");
-  updatePlayer(playerRight, { left: "ArrowLeft", right: "ArrowRight", jump: "ArrowUp" }, "right");
-  updateBall();
-
+function render() {
   drawBackground();
   drawPlayer(playerLeft);
   drawPlayer(playerRight);
   drawBall();
   drawWinnerOverlay();
 
+  if (!gameOver) {
+    messageEl.textContent = `Ball Speed: ${ballSpeedLevel} (${getBallConfig().label}) | Tombol 1-5 untuk ganti speed bola`;
+  }
+}
+
+let lastTime = 0;
+let accumulator = 0;
+
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  let delta = timestamp - lastTime;
+  lastTime = timestamp;
+
+  if (delta > 100) delta = 100;
+  accumulator += delta;
+
+  while (accumulator >= FIXED_TIMESTEP) {
+    updatePlayer(playerLeft, { left: "a", right: "d", jump: "w" }, "left");
+    updatePlayer(playerRight, { left: "ArrowLeft", right: "ArrowRight", jump: "ArrowUp" }, "right");
+    updateBall();
+    accumulator -= FIXED_TIMESTEP;
+  }
+
+  render();
   requestAnimationFrame(gameLoop);
 }
 
 document.addEventListener("keydown", (e) => {
   keys[e.key] = true;
+
+  if (["1", "2", "3", "4", "5"].includes(e.key)) {
+    ballSpeedLevel = Number(e.key);
+    messageEl.textContent = `Ball speed diubah ke level ${ballSpeedLevel} (${getBallConfig().label})`;
+    if (!gameOver) {
+      const dir = ball.vx >= 0 ? 1 : -1;
+      ball.vx = Math.abs(getBallConfig().baseVX) * dir;
+    }
+  }
 });
 
 document.addEventListener("keyup", (e) => {
@@ -357,4 +400,4 @@ restartBtn.addEventListener("click", restartGame);
 
 updateScore();
 resetBall();
-gameLoop();
+requestAnimationFrame(gameLoop);
