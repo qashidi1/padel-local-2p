@@ -14,23 +14,23 @@ const NET_WIDTH = 12;
 const NET_HEIGHT = 120;
 const WIN_SCORE = 7;
 
-// Physics/update
-const FIXED_TIMESTEP = 1000 / 120; // 120 Hz
-const GRAVITY = 0.32;
-const PLAYER_MOVE_SPEED = 5.4; // responsif
-const PLAYER_JUMP_FORCE = -8.2;
+// Update karakter tetap responsif
+const FIXED_TIMESTEP = 1000 / 120;
+const GRAVITY = 0.22;
+const PLAYER_MOVE_SPEED = 5.2;
+const PLAYER_JUMP_FORCE = -6.8;
 const MAX_FALL_SPEED = 12;
 
-// Ball speed levels
+// Speed bola dibuat jauh lebih pelan
 const BALL_SPEED_LEVELS = {
-  1: { label: "Very Slow", baseVX: 1.2, bounceX: 1.3, bounceBoost: 0.25, bounceY: -2.0 },
-  2: { label: "Slow",      baseVX: 1.8, bounceX: 1.8, bounceBoost: 0.35, bounceY: -2.6 },
-  3: { label: "Medium",    baseVX: 2.5, bounceX: 2.4, bounceBoost: 0.50, bounceY: -3.3 },
-  4: { label: "Fast",      baseVX: 3.2, bounceX: 3.0, bounceBoost: 0.65, bounceY: -4.0 },
-  5: { label: "Very Fast", baseVX: 4.0, bounceX: 3.8, bounceBoost: 0.80, bounceY: -4.8 }
+  1: { label: "10%", baseVX: 0.25, bounceX: 0.28, bounceBoost: 0.08, bounceY: -0.8 },
+  2: { label: "20%", baseVX: 0.50, bounceX: 0.55, bounceBoost: 0.12, bounceY: -1.2 },
+  3: { label: "35%", baseVX: 0.85, bounceX: 0.90, bounceBoost: 0.18, bounceY: -1.8 },
+  4: { label: "50%", baseVX: 1.20, bounceX: 1.30, bounceBoost: 0.25, bounceY: -2.3 },
+  5: { label: "75%", baseVX: 1.80, bounceX: 1.90, bounceBoost: 0.35, bounceY: -3.0 }
 };
 
-let ballSpeedLevel = 2;
+let ballSpeedLevel = 1;
 
 const keys = {};
 let leftScore = 0;
@@ -145,7 +145,6 @@ function updatePlayer(player, controls, side) {
 
 function bounceBallFromPlayer(player, side) {
   const rect = { x: player.x, y: player.y, w: player.w, h: player.h };
-
   if (!circleRectCollision(ball, rect)) return;
 
   const cfg = getBallConfig();
@@ -160,14 +159,14 @@ function bounceBallFromPlayer(player, side) {
     ball.vx = -Math.abs(cfg.bounceX + offset * cfg.bounceBoost);
   }
 
-  ball.vy = Math.min(cfg.bounceY, ball.vy - 0.35);
+  ball.vy = Math.min(cfg.bounceY, ball.vy - 0.2);
 }
 
 function updateBall() {
   if (gameOver) return;
 
-  ball.vy += GRAVITY;
-  ball.vy = Math.min(ball.vy, MAX_FALL_SPEED);
+  ball.vy += GRAVITY * 0.55;
+  ball.vy = Math.min(ball.vy, 6);
   ball.x += ball.vx;
   ball.y += ball.vy;
 
@@ -183,7 +182,7 @@ function updateBall() {
 
   if (ball.y - ball.r <= 0) {
     ball.y = ball.r;
-    ball.vy *= -0.95;
+    ball.vy *= -0.9;
   }
 
   const netRect = {
@@ -201,7 +200,7 @@ function updateBall() {
       ball.x = netRect.x + netRect.w + ball.r + 1;
       ball.vx = Math.abs(ball.vx);
     }
-    ball.vy *= 0.96;
+    ball.vy *= 0.95;
   }
 
   bounceBallFromPlayer(playerLeft, "left");
