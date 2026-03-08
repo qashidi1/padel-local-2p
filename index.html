@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Padel Local 2P</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Padel Local 2 Player</h1>
+    <div class="topbar">
+      <div class="score">Left: <span id="leftScore">0</span></div>
+      <div class="score">Right: <span id="rightScore">0</span></div>
+      <button id="restartBtn">Restart</button>
+    </div>
+
+    <p class="help">
+      Player Kiri: A = kiri, D = kanan, W = lompat<br />
+      Player Kanan: ← = kiri, → = kanan, ↑ = lompat
+    </p>
+
+    <canvas id="gameCanvas" width="1000" height="500"></canvas>
+    <p id="message"></p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
